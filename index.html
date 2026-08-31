@@ -8,151 +8,221 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
-    --bg:#F6F4F0;
-    --ink:#1E2124;
-    --ink-soft:#5B5F63;
-    --line:#DEDAD2;
+    --page:#F5F6F8;
+    --ink:#12151B;
+    --ink-soft:#667085;
+    --ink-faint:#98A2B3;
+    --line:#E4E7EC;
     --card:#FFFFFF;
-    --red:#C5432B;
-    --red-bg:#FBE9E5;
-    --orange:#B8701A;
-    --orange-bg:#FBEEDC;
-    --gray-bg:#EEECE7;
-    --accent:#1E2124;
+    --hero:#12151B;
+    --hero-soft:#B9BFCB;
+
+    --red:#D6402A;
+    --red-bg:#FCEAE6;
+    --red-line:#F4C6BB;
+    --orange:#B5730E;
+    --orange-bg:#FBEFDA;
+    --orange-line:#EFD2A0;
+    --green:#1F8A53;
+    --green-bg:#E4F5EB;
+    --gray-bg:#EEF0F3;
+
     --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
     --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Pretendard", "Malgun Gothic", sans-serif;
+    --shadow: 0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
   }
   *{box-sizing:border-box;}
   body{
-    margin:0; background:var(--bg); color:var(--ink);
+    margin:0; background:var(--page); color:var(--ink);
     font-family:var(--sans); -webkit-font-smoothing:antialiased;
   }
-  .wrap{max-width:1080px; margin:0 auto; padding:28px 20px 80px;}
-  header.top{display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:24px; flex-wrap:wrap;}
-  h1{font-size:22px; margin:0 0 4px; letter-spacing:-0.01em;}
-  .sub{color:var(--ink-soft); font-size:13.5px; line-height:1.5; max-width:520px;}
-  .badge-meta{
-    display:flex; flex-direction:column; gap:4px; align-items:flex-end; font-size:11.5px; color:var(--ink-soft);
-    border-left:2px solid var(--line); padding-left:12px; text-align:right;
+  .wrap{max-width:1080px; margin:0 auto; padding:0 20px 80px;}
+
+  /* ---------- 히어로 ---------- */
+  .hero{
+    background:radial-gradient(1200px 320px at 82% -20%, #232A38 0%, var(--hero) 55%);
+    color:#fff; position:relative; overflow:hidden;
+    padding:36px 20px 30px;
   }
-  .badge-meta b{color:var(--ink); font-weight:600;}
+  .hero-inner{max-width:1080px; margin:0 auto; position:relative; z-index:1;
+    display:flex; justify-content:space-between; align-items:flex-start; gap:20px; flex-wrap:wrap;}
+  .hero-title{display:flex; align-items:center; gap:12px;}
+  .hero-title svg{flex-shrink:0;}
+  .hero h1{font-size:25px; margin:0 0 6px; letter-spacing:-0.01em; font-weight:800;}
+  .hero .sub{color:var(--hero-soft); font-size:13.5px; line-height:1.6; max-width:480px; margin:0;}
+  .badge-meta{
+    display:flex; flex-direction:column; gap:5px; align-items:flex-end; font-size:11.5px; color:var(--hero-soft);
+    padding-left:12px; text-align:right; padding-top:2px;
+  }
+  .badge-meta b{color:#fff; font-weight:700;}
+  .radar-deco{position:absolute; right:-40px; top:-60px; opacity:.35; z-index:0;}
 
-  section{margin-bottom:28px;}
-  .card{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:20px;}
+  section{margin-bottom:22px;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:22px; box-shadow:var(--shadow);}
+  .wrap > section:first-of-type{margin-top:24px;}
 
-  .step-label{font-size:12px; color:var(--ink-soft); margin-bottom:10px; font-weight:600;}
+  .step-label{font-size:12px; color:var(--ink-faint); margin-bottom:12px; font-weight:700; letter-spacing:.01em;}
+
+  details > summary{list-style:none;}
+  details > summary::-webkit-details-marker{display:none;}
+  details summary{position:relative; padding-right:24px;}
+  details summary:after{
+    content:"⌄"; position:absolute; right:2px; top:-2px; font-size:18px; color:var(--ink-faint);
+    transition:transform .15s;
+  }
+  details[open] summary:after{transform:rotate(180deg);}
 
   .dropzone{
-    border:1.5px dashed #C9C4B8; border-radius:10px; padding:28px 20px; text-align:center;
-    cursor:pointer; transition:border-color .15s, background .15s;
+    border:1.5px dashed #CBD2DC; border-radius:14px; padding:34px 20px; text-align:center;
+    cursor:pointer; transition:border-color .15s, background .15s; background:#FAFBFC;
   }
   .dropzone.drag{border-color:var(--red); background:var(--red-bg);}
+  .dropzone svg{margin-bottom:10px; color:var(--ink-faint);}
   .dropzone p{margin:4px 0; color:var(--ink-soft); font-size:13.5px;}
-  .dropzone strong{color:var(--ink); font-size:15px;}
+  .dropzone strong{color:var(--ink); font-size:16px; display:block; margin-bottom:6px;}
   .dropzone input{display:none;}
 
   .filelist{margin-top:16px; display:flex; flex-direction:column; gap:8px;}
   .file-row{
-    display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--gray-bg);
-    border-radius:8px; font-size:13px; flex-wrap:wrap;
+    display:flex; align-items:center; gap:10px; padding:11px 14px; background:var(--gray-bg);
+    border-radius:10px; font-size:13px; flex-wrap:wrap;
   }
   .file-row .fname{font-family:var(--mono); font-size:12.5px; flex:1; min-width:140px; word-break:break-all;}
   .file-row select{
-    font-size:12.5px; padding:4px 6px; border-radius:6px; border:1px solid var(--line); background:#fff;
+    font-size:12.5px; padding:5px 8px; border-radius:7px; border:1px solid var(--line); background:#fff;
   }
-  .file-row .count{color:var(--ink-soft); font-size:11.5px;}
-  .file-row .rm{cursor:pointer; color:var(--ink-soft); font-size:16px; line-height:1; padding:0 4px;}
+  .file-row .count{color:var(--ink-faint); font-size:11.5px;}
+  .file-row .rm{cursor:pointer; color:var(--ink-faint); font-size:18px; line-height:1; padding:0 4px;}
   .file-row .rm:hover{color:var(--red);}
-  .tag{display:inline-block; padding:2px 8px; border-radius:100px; font-size:11px; font-weight:600;}
-  .tag.ok{background:#E4EFE6; color:#2E6B3E;}
+  .tag{display:inline-block; padding:3px 10px; border-radius:100px; font-size:11px; font-weight:700;}
+  .tag.ok{background:var(--green-bg); color:var(--green);}
   .tag.warn{background:var(--orange-bg); color:var(--orange);}
 
-  .run-row{display:flex; align-items:center; gap:12px; margin-top:18px; flex-wrap:wrap;}
+  .run-row{display:flex; align-items:center; gap:14px; margin-top:20px; flex-wrap:wrap;}
   button{
-    font-family:var(--sans); font-size:14px; font-weight:600; padding:11px 20px; border-radius:8px;
-    border:none; cursor:pointer; transition:opacity .15s;
+    font-family:var(--sans); font-size:14px; font-weight:700; padding:12px 22px; border-radius:10px;
+    border:none; cursor:pointer; transition:transform .1s, opacity .15s, background .15s;
   }
-  button.primary{background:var(--ink); color:#fff;}
-  button.primary:disabled{background:#C9C4B8; cursor:not-allowed;}
-  button.ghost{background:transparent; border:1px solid var(--line); color:var(--ink-soft);}
-  button:hover:not(:disabled){opacity:.85;}
-  .hint{font-size:12px; color:var(--ink-soft);}
+  button.primary{background:var(--red); color:#fff; box-shadow:0 2px 8px rgba(214,64,42,.35);}
+  button.primary:disabled{background:#D9DEE5; color:#9AA4B2; box-shadow:none; cursor:not-allowed;}
+  button.ghost{background:#fff; border:1px solid var(--line); color:var(--ink-soft);}
+  button:hover:not(:disabled){opacity:.9;}
+  button:active:not(:disabled){transform:scale(.98);}
+  .hint{font-size:12px; color:var(--ink-faint);}
 
   #results{display:none;}
   .store-banner{
     display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;
-    padding:16px 20px; background:var(--ink); color:#fff; border-radius:10px; margin-bottom:16px;
+    padding:18px 22px; background:var(--hero); color:#fff; border-radius:14px; margin-bottom:16px;
   }
-  .store-banner .name{font-size:17px; font-weight:700;}
-  .store-banner .meta{font-size:12px; opacity:.75;}
+  .store-banner .name{font-size:18px; font-weight:800; display:flex; align-items:center; gap:8px;}
+  .store-banner .meta{font-size:12px; color:var(--hero-soft); margin-top:3px;}
 
-  .stat-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px;}
-  .stat{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px;}
-  .stat .num{font-size:24px; font-weight:700; line-height:1.1;}
-  .stat .label{font-size:12px; color:var(--ink-soft); margin-top:2px;}
+  .stat-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:18px;}
+  .stat{
+    background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px;
+    box-shadow:var(--shadow); border-left:3px solid var(--line); display:flex; flex-direction:column; gap:6px;
+  }
+  .stat .top-row{display:flex; align-items:center; justify-content:space-between;}
+  .stat .num{font-size:30px; font-weight:800; line-height:1; font-variant-numeric:tabular-nums;}
+  .stat .label{font-size:12.5px; color:var(--ink-soft); font-weight:600;}
+  .stat.red{border-left-color:var(--red);}
   .stat.red .num{color:var(--red);}
+  .stat.orange{border-left-color:var(--orange);}
   .stat.orange .num{color:var(--orange);}
+  .stat.neutral{border-left-color:var(--ink);}
 
-  .controls{display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin-bottom:14px;}
-  .tabs{display:flex; gap:6px;}
+  .controls{display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:16px;
+    padding-bottom:16px; border-bottom:1px solid var(--line);}
+  .tabs{display:flex; gap:6px; background:var(--gray-bg); padding:4px; border-radius:12px;}
   .tab{
-    padding:7px 14px; border-radius:100px; font-size:13px; font-weight:600; cursor:pointer;
-    border:1px solid var(--line); background:#fff; color:var(--ink-soft);
+    padding:7px 14px; border-radius:9px; font-size:13px; font-weight:700; cursor:pointer;
+    border:none; background:transparent; color:var(--ink-soft); transition:background .12s, color .12s;
   }
-  .tab.active{background:var(--ink); color:#fff; border-color:var(--ink);}
-  .threshold-ctl{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--ink-soft);}
-  .threshold-ctl input[type=range]{width:120px;}
-  .search-ctl{flex:1; min-width:160px;}
+  .tab.active{background:var(--ink); color:#fff;}
+  .threshold-ctl{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--ink-soft); font-weight:600;}
+  .threshold-ctl input[type=range]{width:120px; accent-color:var(--red);}
+  .search-ctl{flex:1; min-width:180px;}
   .search-ctl input{
-    width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--line); font-size:13px;
+    width:100%; padding:9px 14px; border-radius:10px; border:1px solid var(--line); font-size:13px;
+    background:#FAFBFC;
+  }
+  .search-ctl input:focus, .dropzone:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible{
+    outline:2px solid var(--red); outline-offset:1px;
   }
 
   table{width:100%; border-collapse:collapse; font-size:13px;}
   thead th{
-    text-align:left; font-size:11px; color:var(--ink-soft); font-weight:600; padding:8px 10px;
-    border-bottom:1px solid var(--line); white-space:nowrap;
+    text-align:left; font-size:11.5px; color:var(--ink-soft); font-weight:700; padding:11px 12px;
+    border-bottom:2px solid var(--line); white-space:nowrap;
+    position:sticky; top:0; background:#FAFBFC; z-index:2;
   }
-  tbody td{padding:10px 10px; border-bottom:1px solid #EDEAE3; vertical-align:top;}
-  tbody tr:hover{background:#FAF9F6;}
+  tbody td{padding:12px; border-bottom:1px solid #EEF0F3; vertical-align:top;}
+  tbody tr:hover{background:#FAFBFC;}
   .grade-badge{
-    display:inline-block; padding:3px 9px; border-radius:100px; font-size:11.5px; font-weight:700; white-space:nowrap;
+    display:inline-flex; align-items:center; gap:5px; padding:4px 10px 4px 8px; border-radius:100px;
+    font-size:11.5px; font-weight:800; white-space:nowrap;
   }
-  .grade-badge.즉시등록{background:var(--red-bg); color:var(--red);}
-  .grade-badge.창고당김{background:var(--orange-bg); color:var(--orange);}
-  .style-code{font-family:var(--mono); font-size:12px; color:var(--ink-soft);}
-  .action-txt{font-size:12.5px; color:var(--ink-soft); max-width:230px;}
-  .pct{font-family:var(--mono); font-size:11.5px; color:var(--ink-soft);}
+  .grade-badge.즉시등록{background:var(--red-bg); color:var(--red); border:1px solid var(--red-line);}
+  .grade-badge.창고당김{background:var(--orange-bg); color:var(--orange); border:1px solid var(--orange-line);}
+  .style-code{font-family:var(--mono); font-size:12px; color:var(--ink-faint);}
+  .action-txt{font-size:12.5px; color:var(--ink-soft); max-width:230px; line-height:1.5;}
   .num-cell{text-align:right; font-variant-numeric:tabular-nums;}
+  .sales-val{font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; font-size:13.5px;}
+  .stock-chip{
+    display:inline-block; padding:3px 10px; border-radius:7px; font-size:12.5px; font-weight:800;
+    font-variant-numeric:tabular-nums; font-family:var(--mono);
+  }
+  .stock-chip.store{background:var(--red-bg); color:var(--red);}
+  .stock-chip.wh{background:var(--orange-bg); color:var(--orange);}
+  .stock-chip.empty{background:transparent; color:var(--ink-faint); font-family:var(--sans); font-weight:400;}
   .sizes{font-size:11.5px; color:var(--ink-soft); max-width:180px;}
 
-  .empty{text-align:center; padding:40px 20px; color:var(--ink-soft); font-size:13.5px;}
-  .foot-actions{display:flex; justify-content:space-between; margin-top:16px; flex-wrap:wrap; gap:10px;}
+  .empty{text-align:center; padding:48px 20px; color:var(--ink-faint); font-size:13.5px;}
+  .foot-actions{display:flex; justify-content:space-between; align-items:center; margin-top:16px; flex-wrap:wrap; gap:10px;}
 
   @media (max-width:640px){
+    .hero h1{font-size:21px;}
     .stat-grid{grid-template-columns:1fr 1fr;}
     thead{display:none;}
     table, tbody, tr, td{display:block; width:100%;}
-    tbody tr{border:1px solid var(--line); border-radius:8px; margin-bottom:10px; padding:10px 12px;}
-    tbody td{border:none; padding:4px 0;}
-    tbody td:before{content:attr(data-label); display:block; font-size:10.5px; color:var(--ink-soft); font-weight:600; margin-bottom:2px;}
+    tbody tr{border:1px solid var(--line); border-radius:10px; margin-bottom:10px; padding:10px 12px;}
+    tbody td{border:none; padding:5px 0;}
+    tbody td:before{content:attr(data-label); display:block; font-size:10.5px; color:var(--ink-faint); font-weight:700; margin-bottom:2px;}
   }
 </style>
 </head>
 <body>
-<div class="wrap">
 
-  <header class="top">
-    <div>
-      <h1>온라인판매 액션 레이더</h1>
-      <p class="sub">온라인판매실적 · 점재고 · 물류재고 3개 파일을 올리면, 이 매장에서 지금 스마트스토어에 등록하면 좋을 상품과 창고에서 당겨와야 할 상품을 자동으로 골라줍니다.</p>
+<div class="hero">
+  <svg class="radar-deco" width="360" height="360" viewBox="0 0 360 360" fill="none" aria-hidden="true">
+    <circle cx="290" cy="70" r="60" stroke="#ffffff" stroke-opacity=".18" stroke-width="1"/>
+    <circle cx="290" cy="70" r="110" stroke="#ffffff" stroke-opacity=".12" stroke-width="1"/>
+    <circle cx="290" cy="70" r="160" stroke="#ffffff" stroke-opacity=".07" stroke-width="1"/>
+    <path d="M290 70 L290 -60" stroke="#D6402A" stroke-opacity=".5" stroke-width="2"/>
+  </svg>
+  <div class="hero-inner">
+    <div class="hero-title">
+      <svg width="34" height="34" viewBox="0 0 34 34" fill="none" aria-hidden="true">
+        <circle cx="17" cy="17" r="16" stroke="#D6402A" stroke-width="1.6"/>
+        <circle cx="17" cy="17" r="10" stroke="#D6402A" stroke-opacity=".6" stroke-width="1.4"/>
+        <circle cx="17" cy="17" r="2.4" fill="#D6402A"/>
+        <path d="M17 17 L28 8" stroke="#D6402A" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      <div>
+        <h1>온라인판매 액션 레이더</h1>
+        <p class="sub">온라인판매실적 · 점재고 · 물류재고 3개 파일을 올리면, 이 매장에서 지금 스마트스토어에 등록하면 좋을 상품과 창고에서 당겨와야 할 상품을 자동으로 골라줍니다.</p>
+      </div>
     </div>
     <div class="badge-meta">
-      <div>페이지 버전 <b>v1.0</b></div>
+      <div>페이지 버전 <b>v2.0</b></div>
       <div id="dataAsOf">데이터 기준 —</div>
       <div>브라우저 내에서만 처리 · 파일 서버 업로드 없음</div>
     </div>
-  </header>
+  </div>
+</div>
 
+<div class="wrap">
   <section class="card" id="guideSection" style="margin-bottom:16px;">
     <details open>
       <summary style="cursor:pointer; font-weight:700; font-size:14px;">처음 사용하시나요? 파일 받는 법 · 결과 보는 법</summary>
@@ -162,22 +232,19 @@
           <ul style="margin:6px 0 0; padding-left:18px;">
             <li><b>점재고</b> — "스타일별 입출고실적조회" 화면에서 점/창고구분을 <b>점</b>으로, 우리 매장으로 선택 후 다운로드</li>
             <li><b>물류재고</b> — 같은 화면에서 점/창고구분을 <b>창고</b>로 선택 후 다운로드</li>
-            <li><b>온라인판매</b> — "판매원 실적조회(일)" 화면에서 기간을 지정해 다운로드</li>
+            <li><b>온라인판매</b> — "판매원 실적조회(일) 또는 (월)" 화면에서 사번 <b>900000</b> 입력 후 조회 → 기간 지정 후 다운로드 (일별·월별 둘 다 가능)</li>
           </ul>
         </div>
         <div>
-          <b style="color:var(--ink);">2. 파일명은 신경 쓰지 않으셔도 됩니다</b>
-          <p style="margin:6px 0 0;">파일을 그대로 올리면 내용을 보고 자동으로 종류를 구분합니다. 혹시 잘못 구분되면 파일 목록의 드롭다운에서 직접 고쳐주세요.</p>
-        </div>
-        <div>
-          <b style="color:var(--ink);">3. 결과 등급은 이런 뜻입니다</b>
+          <b style="color:var(--ink);">2. 결과 등급은 이런 뜻입니다</b>
           <ul style="margin:6px 0 0; padding-left:18px;">
             <li><span class="grade-badge 즉시등록" style="margin-right:4px;">🔴 즉시등록</span>온라인에서 잘 팔리고, 우리 매장에 재고도 있는 상품 — 지금 바로 스마트스토어에 올리세요</li>
             <li><span class="grade-badge 창고당김" style="margin-right:4px;">🟠 창고당김</span>온라인에서 잘 팔리는데 우리 매장엔 재고가 없는 상품 — 물류센터에 요청해서 받아온 뒤 올리세요</li>
           </ul>
         </div>
         <div>
-          <b style="color:var(--ink);">문의</b> — 결과가 이상하거나 사용법이 헷갈리면 지역장(SV)에게 연락해주세요. <span style="opacity:.7;">[담당자 연락처를 여기에 적어두세요]</span>
+          <b style="color:var(--ink);">3. 목록이 너무 많으면 "상위 % 기준" 슬라이더를 낮추세요</b>
+          <p style="margin:6px 0 0;">결과 화면 위쪽의 <b>"상위 ○% 기준"</b> 슬라이더는 전사에서 온라인 판매가 잘 되는 순서로 상위 몇 %까지만 볼지 정하는 기능입니다. 숫자를 낮출수록(예: 30% → 10%) 정말 잘 팔리는 상품만 추려서 목록이 줄어듭니다. 숫자를 높이면 더 폭넓게 보여줍니다.</p>
         </div>
         <div style="padding-top:8px; border-top:1px solid var(--line);">
           이 페이지는 검색엔진에 노출되지 않도록 설정되어 있습니다. 다만 <b>URL을 아는 사람은 누구나 열람할 수 있어</b> 별도 로그인은 없으니, 주소는 사내에서만 공유해주세요.
@@ -189,9 +256,12 @@
   <section class="card" id="uploadSection">
     <div class="step-label">1. 파일 3개 업로드</div>
     <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="엑셀 파일 3개를 여기로 끌어다 놓거나 클릭해서 선택하세요">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 3v12M12 3l-4 4M12 3l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
       <strong>여기로 엑셀 파일을 끌어다 놓으세요</strong>
       <p>또는 클릭해서 파일 선택 (물류재고 · 점재고 · 타사온라인판매, 3개를 한 번에 선택해도 됩니다)</p>
-      <p style="font-size:11.5px;">파일명이 달라도 괜찮습니다 — 내용을 분석해서 자동으로 종류를 구분합니다</p>
       <input type="file" id="fileInput" accept=".xlsx,.xls" multiple>
     </div>
     <div class="filelist" id="fileList"></div>
@@ -206,23 +276,37 @@
   <section id="results">
     <div class="store-banner">
       <div>
-        <div class="name" id="storeName">-</div>
+        <div class="name" id="storeName">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 10l1.5-6h13L20 10M4 10v9a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-9M4 10h16M9 20v-5h6v5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          </svg>
+          <span id="storeNameText">-</span>
+        </div>
         <div class="meta" id="storeMeta">-</div>
       </div>
     </div>
 
     <div class="stat-grid">
       <div class="stat red">
+        <div class="top-row">
+          <div class="label">즉시등록 대상</div>
+          <span style="font-size:16px;">🔴</span>
+        </div>
         <div class="num" id="statImmediate">0</div>
-        <div class="label">🔴 즉시등록 대상</div>
       </div>
       <div class="stat orange">
+        <div class="top-row">
+          <div class="label">창고당김 대상</div>
+          <span style="font-size:16px;">🟠</span>
+        </div>
         <div class="num" id="statPull">0</div>
-        <div class="label">🟠 창고당김 대상</div>
       </div>
-      <div class="stat">
+      <div class="stat neutral">
+        <div class="top-row">
+          <div class="label">전체 액션 대상 SKU</div>
+          <span style="font-size:16px;">📋</span>
+        </div>
         <div class="num" id="statTotal">0</div>
-        <div class="label">전체 액션 대상 SKU</div>
       </div>
     </div>
 
@@ -237,20 +321,29 @@
           <label for="searchBox" style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0);">브랜드, 상품명, 스타일로 검색</label>
           <input type="text" id="searchBox" placeholder="브랜드·상품명·스타일 검색">
         </div>
-        <div class="threshold-ctl">
+        <div class="threshold-ctl" title="전사 온라인판매 순위 기준 상위 몇 %까지 볼지 정합니다. 낮출수록 목록이 줄어듭니다.">
           <label for="thresholdSlider">상위</label>
-          <input type="range" id="thresholdSlider" min="5" max="60" value="30" step="5" aria-valuetext="상위 30퍼센트">
-          <span id="thresholdVal" aria-live="polite">30%</span>
-          <span>기준</span>
+          <input type="range" id="thresholdSlider" min="5" max="60" value="15" step="5" aria-valuetext="상위 15퍼센트">
+          <span id="thresholdVal" aria-live="polite">15%</span>
+          <span>기준 <span style="opacity:.6;">(목록이 많으면 낮추세요)</span></span>
+        </div>
+        <div class="threshold-ctl">
+          <label for="whMinInput">창고당김 최소 창고재고</label>
+          <input type="number" id="whMinInput" value="100" min="0" step="10" style="width:64px; padding:6px 8px; border-radius:6px; border:1px solid var(--line);">
+          <span>족</span>
+        </div>
+        <div class="threshold-ctl">
+          <label for="storeMinInput">즉시등록 제외 매장재고</label>
+          <input type="number" id="storeMinInput" value="8" min="0" step="1" style="width:56px; padding:6px 8px; border-radius:6px; border:1px solid var(--line);">
+          <span>족 이하 (창고도 부족할 때만)</span>
         </div>
       </div>
 
-      <div style="overflow-x:auto;">
+      <div class="table-scroll" style="overflow:auto; max-height:560px; border:1px solid var(--line); border-radius:8px;">
         <table>
           <thead>
             <tr>
               <th>등급</th>
-              <th>전체상위%</th>
               <th>브랜드</th>
               <th>상품 / 스타일 / 컬러</th>
               <th class="num-cell">온라인매출</th>
@@ -466,7 +559,7 @@ resetBtn.addEventListener('click', () => {
    3) 매칭 / 등급 산출 로직
    ========================================================= */
 
-function buildAnalysis(threshold){
+function buildAnalysis(threshold, whMinPull, storeMinExclude){
   const online = state.parsedByType['온라인판매'];
   const warehouse = state.parsedByType['물류재고'];
   const store = state.parsedByType['점재고'];
@@ -539,13 +632,19 @@ function buildAnalysis(threshold){
       const sortedSizes = storeEntry ? sortSizes(storeEntry.sizes) : [];
 
       if (storeEntry && storeEntry.qty > 0){
+        const whQtyForThis = whEntry ? whEntry.qty : 0;
+        // 매장재고도 적고(storeMinExclude 이하) 창고재고도 부족(whMinPull 미만)하면
+        // 지금 등록해도 금방 품절되고 보충도 안 되므로 즉시등록 대상에서 제외한다.
+        if (storeEntry.qty <= storeMinExclude && whQtyForThis < whMinPull){
+          continue;
+        }
         results.push({
           grade:'즉시등록', rank, pct, style, color, sales,
-          storeQty: storeEntry.qty, sizes: sortedSizes, whQty: whEntry ? whEntry.qty : 0,
+          storeQty: storeEntry.qty, sizes: sortedSizes, whQty: whQtyForThis,
           brand, product,
           action: `스마트스토어 즉시 등록 — 매장재고 ${storeEntry.qty}족, 사이즈 ${sortedSizes.join(', ')||'-'} 보유`
         });
-      } else if (whEntry && whEntry.qty > 0){
+      } else if (whEntry && whEntry.qty >= whMinPull){
         results.push({
           grade:'창고당김', rank, pct, style, color, sales,
           storeQty: 0, sizes: [], whQty: whEntry.qty,
@@ -553,9 +652,14 @@ function buildAnalysis(threshold){
           action: `물류센터에 ${whEntry.qty}족 요청 후 등록 추천`
         });
       }
+      // 그 외(매장재고 없음 + 창고재고도 whMinPull 미만)는 당길 수 없는 물량이므로 표시하지 않는다.
     }
   }
-  results.sort((a,b) => a.rank - b.rank);
+  results.sort((a,b) => {
+    const gradeOrder = {즉시등록:0, 창고당김:1};
+    if (gradeOrder[a.grade] !== gradeOrder[b.grade]) return gradeOrder[a.grade] - gradeOrder[b.grade];
+    return a.rank - b.rank;
+  });
   return {results, totalStyles, cutoffRank};
 }
 
@@ -584,11 +688,13 @@ let currentGradeTab = '전체';
 
 function runAnalysisAndRender(){
   const threshold = Number(document.getElementById('thresholdSlider').value) / 100;
-  const {results, totalStyles} = buildAnalysis(threshold);
+  const whMinPull = Number(document.getElementById('whMinInput').value) || 0;
+  const storeMinExclude = Number(document.getElementById('storeMinInput').value) || 0;
+  const {results, totalStyles} = buildAnalysis(threshold, whMinPull, storeMinExclude);
   state.fullResults = results;
   state.totalStyles = totalStyles;
 
-  document.getElementById('storeName').textContent = state.storeName;
+  document.getElementById('storeNameText').textContent = state.storeName;
   document.getElementById('storeMeta').textContent =
     `온라인판매 스타일 모수 ${totalStyles.toLocaleString()}개 · 상위 ${Math.round(threshold*100)}% 기준 · 분석시각 ${new Date().toLocaleString('ko-KR')}`;
   document.getElementById('dataAsOf').innerHTML = `데이터 기준 <b>${new Date().toLocaleDateString('ko-KR')}</b>`;
@@ -622,14 +728,19 @@ function renderTable(){
 
   rows.forEach(r => {
     const tr = document.createElement('tr');
+    const storeCell = r.storeQty
+      ? `<span class="stock-chip store">${r.storeQty}족</span>`
+      : `<span class="stock-chip empty">-</span>`;
+    const whCell = r.whQty
+      ? `<span class="stock-chip wh">${r.whQty}족</span>`
+      : `<span class="stock-chip empty">-</span>`;
     tr.innerHTML = `
       <td data-label="등급"><span class="grade-badge ${r.grade}">${r.grade==='즉시등록'?'🔴':'🟠'} ${r.grade}</span></td>
-      <td data-label="전체상위%" class="pct">${r.pct.toFixed(1)}%</td>
       <td data-label="브랜드">${r.brand}</td>
       <td data-label="상품/스타일/컬러">${r.product}<br><span class="style-code">${r.style} / ${r.color}</span></td>
-      <td data-label="온라인매출" class="num-cell">${r.sales.toLocaleString()}원</td>
-      <td data-label="매장재고" class="num-cell">${r.storeQty ? r.storeQty+'족' : '-'}</td>
-      <td data-label="창고재고" class="num-cell">${r.whQty ? r.whQty+'족' : '-'}</td>
+      <td data-label="온라인매출" class="num-cell"><span class="sales-val">${r.sales.toLocaleString()}원</span></td>
+      <td data-label="매장재고" class="num-cell">${storeCell}</td>
+      <td data-label="창고재고" class="num-cell">${whCell}</td>
       <td data-label="보유사이즈" class="sizes">${r.sizes.length ? r.sizes.join(', ') : '-'}</td>
       <td data-label="액션" class="action-txt">${r.action}</td>
     `;
@@ -654,14 +765,19 @@ document.getElementById('thresholdSlider').addEventListener('input', e => {
 document.getElementById('thresholdSlider').addEventListener('change', () => {
   if (Object.keys(state.parsedByType).length === 3) runAnalysisAndRender();
 });
+['whMinInput','storeMinInput'].forEach(id => {
+  document.getElementById(id).addEventListener('change', () => {
+    if (Object.keys(state.parsedByType).length === 3) runAnalysisAndRender();
+  });
+});
 
 document.getElementById('exportBtn').addEventListener('click', () => {
   const rows = currentFiltered();
-  const header = ['등급','전체상위%','브랜드','상품','스타일','컬러','온라인매출','매장재고','창고재고','보유사이즈','액션'];
+  const header = ['등급','브랜드','상품','스타일','컬러','온라인매출','매장재고','창고재고','보유사이즈','액션'];
   const csvRows = [header.join(',')];
   rows.forEach(r => {
     csvRows.push([
-      r.grade, r.pct.toFixed(1), r.brand, r.product, r.style, r.color,
+      r.grade, r.brand, r.product, r.style, r.color,
       r.sales, r.storeQty, r.whQty, `"${r.sizes.join('/')}"`, `"${r.action}"`
     ].join(','));
   });
