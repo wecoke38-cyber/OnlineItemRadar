@@ -175,6 +175,7 @@
   }
   .stock-chip.store{background:var(--red-bg); color:var(--red);}
   .stock-chip.wh{background:var(--orange-bg); color:var(--orange);}
+  .stock-chip.mine{background:#E9EDF7; color:#3B5BA9;}
   .stock-chip.empty{background:transparent; color:var(--ink-faint); font-family:var(--sans); font-weight:400;}
   .sizes{font-size:11.5px; color:var(--ink-soft); max-width:180px;}
 
@@ -183,7 +184,7 @@
 
   @media (max-width:640px){
     .hero h1{font-size:21px;}
-    .stat-grid{grid-template-columns:1fr 1fr;}
+    .stat-grid{grid-template-columns:1fr 1fr !important;}
     thead{display:none;}
     table, tbody, tr, td{display:block; width:100%;}
     tbody tr{border:1px solid var(--line); border-radius:10px; margin-bottom:10px; padding:10px 12px;}
@@ -286,7 +287,7 @@
       </div>
     </div>
 
-    <div class="stat-grid">
+    <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);">
       <div class="stat red">
         <div class="top-row">
           <div class="label">즉시등록 대상</div>
@@ -307,6 +308,13 @@
           <span style="font-size:16px;">📋</span>
         </div>
         <div class="num" id="statTotal">0</div>
+      </div>
+      <div class="stat neutral">
+        <div class="top-row">
+          <div class="label">우리 매장 온라인판매 수량</div>
+          <span style="font-size:16px;">🛒</span>
+        </div>
+        <div class="num" id="statMyOnline">0</div>
       </div>
     </div>
 
@@ -346,7 +354,8 @@
               <th>등급</th>
               <th>브랜드</th>
               <th>상품 / 스타일 / 컬러</th>
-              <th class="num-cell">온라인매출</th>
+              <th class="num-cell">온라인매출(전사)</th>
+              <th class="num-cell">우리매장 온라인판매</th>
               <th class="num-cell">매장재고</th>
               <th class="num-cell">창고재고</th>
               <th>보유사이즈</th>
@@ -571,7 +580,7 @@ function buildAnalysis(threshold, whMinPull, storeMinExclude){
     state.storeName += ` 외 ${storeNames.length-1}개 (점재고 파일에 매장이 여러 개 섞여 있습니다)`;
   }
 
-  // 온라인 판매 스타일 랭킹 (취소 제외)
+  // 온라인 판매 스타일 랭킹 (취소 제외) — 전사 기준
   const styleSales = new Map();
   for (const r of online.records){
     if ((r['취소구분']||'').toString().includes('취소')) continue;
@@ -584,6 +593,21 @@ function buildAnalysis(threshold, whMinPull, storeMinExclude){
   const styleRank = new Map();
   ranked.forEach(([s,sales], i) => styleRank.set(s, {rank:i+1, sales}));
   const totalStyles = ranked.length;
+
+  // 우리 매장이 온라인으로 직접 판매한 수량 (점재고 파일에서 감지한 매장명과 일치하는 행만, 취소 제외)
+  const myOnlineMap = new Map();
+  let myOnlineTotalQty = 0;
+  const primaryStoreName = storeNames[0];
+  for (const r of online.records){
+    if ((r['취소구분']||'').toString().includes('취소')) continue;
+    if (r['점'] !== primaryStoreName) continue;
+    const style = r['스타일'];
+    if (!style) continue;
+    const key = `${style}||${r['컬러']}`;
+    const qty = Number(r['수량']) || 0;
+    myOnlineMap.set(key, (myOnlineMap.get(key)||0) + qty);
+    myOnlineTotalQty += qty;
+  }
 
   // 물류재고 맵 (스타일+컬러)
   const whMap = new Map();
@@ -641,6 +665,7 @@ function buildAnalysis(threshold, whMinPull, storeMinExclude){
         results.push({
           grade:'즉시등록', rank, pct, style, color, sales,
           storeQty: storeEntry.qty, sizes: sortedSizes, whQty: whQtyForThis,
+          myOnlineQty: myOnlineMap.get(key) || 0,
           brand, product,
           action: `스마트스토어 즉시 등록 — 매장재고 ${storeEntry.qty}족, 사이즈 ${sortedSizes.join(', ')||'-'} 보유`
         });
@@ -648,6 +673,7 @@ function buildAnalysis(threshold, whMinPull, storeMinExclude){
         results.push({
           grade:'창고당김', rank, pct, style, color, sales,
           storeQty: 0, sizes: [], whQty: whEntry.qty,
+          myOnlineQty: myOnlineMap.get(key) || 0,
           brand, product,
           action: `물류센터에 ${whEntry.qty}족 요청 후 등록 추천`
         });
@@ -660,7 +686,7 @@ function buildAnalysis(threshold, whMinPull, storeMinExclude){
     if (gradeOrder[a.grade] !== gradeOrder[b.grade]) return gradeOrder[a.grade] - gradeOrder[b.grade];
     return a.rank - b.rank;
   });
-  return {results, totalStyles, cutoffRank};
+  return {results, totalStyles, cutoffRank, myOnlineTotalQty};
 }
 
 function sortSizes(sizes){
@@ -690,9 +716,10 @@ function runAnalysisAndRender(){
   const threshold = Number(document.getElementById('thresholdSlider').value) / 100;
   const whMinPull = Number(document.getElementById('whMinInput').value) || 0;
   const storeMinExclude = Number(document.getElementById('storeMinInput').value) || 0;
-  const {results, totalStyles} = buildAnalysis(threshold, whMinPull, storeMinExclude);
+  const {results, totalStyles, myOnlineTotalQty} = buildAnalysis(threshold, whMinPull, storeMinExclude);
   state.fullResults = results;
   state.totalStyles = totalStyles;
+  state.myOnlineTotalQty = myOnlineTotalQty;
 
   document.getElementById('storeNameText').textContent = state.storeName;
   document.getElementById('storeMeta').textContent =
@@ -708,6 +735,7 @@ function renderStats(){
   document.getElementById('statImmediate').textContent = r.filter(x=>x.grade==='즉시등록').length.toLocaleString();
   document.getElementById('statPull').textContent = r.filter(x=>x.grade==='창고당김').length.toLocaleString();
   document.getElementById('statTotal').textContent = r.length.toLocaleString();
+  document.getElementById('statMyOnline').textContent = (state.myOnlineTotalQty||0).toLocaleString();
 }
 
 function currentFiltered(){
@@ -734,11 +762,15 @@ function renderTable(){
     const whCell = r.whQty
       ? `<span class="stock-chip wh">${r.whQty}족</span>`
       : `<span class="stock-chip empty">-</span>`;
+    const myOnlineCell = r.myOnlineQty
+      ? `<span class="stock-chip mine">${r.myOnlineQty}개</span>`
+      : `<span class="stock-chip empty">-</span>`;
     tr.innerHTML = `
       <td data-label="등급"><span class="grade-badge ${r.grade}">${r.grade==='즉시등록'?'🔴':'🟠'} ${r.grade}</span></td>
       <td data-label="브랜드">${r.brand}</td>
       <td data-label="상품/스타일/컬러">${r.product}<br><span class="style-code">${r.style} / ${r.color}</span></td>
-      <td data-label="온라인매출" class="num-cell"><span class="sales-val">${r.sales.toLocaleString()}원</span></td>
+      <td data-label="온라인매출(전사)" class="num-cell"><span class="sales-val">${r.sales.toLocaleString()}원</span></td>
+      <td data-label="우리매장 온라인판매" class="num-cell">${myOnlineCell}</td>
       <td data-label="매장재고" class="num-cell">${storeCell}</td>
       <td data-label="창고재고" class="num-cell">${whCell}</td>
       <td data-label="보유사이즈" class="sizes">${r.sizes.length ? r.sizes.join(', ') : '-'}</td>
@@ -773,12 +805,12 @@ document.getElementById('thresholdSlider').addEventListener('change', () => {
 
 document.getElementById('exportBtn').addEventListener('click', () => {
   const rows = currentFiltered();
-  const header = ['등급','브랜드','상품','스타일','컬러','온라인매출','매장재고','창고재고','보유사이즈','액션'];
+  const header = ['등급','브랜드','상품','스타일','컬러','온라인매출(전사)','우리매장온라인판매수량','매장재고','창고재고','보유사이즈','액션'];
   const csvRows = [header.join(',')];
   rows.forEach(r => {
     csvRows.push([
       r.grade, r.brand, r.product, r.style, r.color,
-      r.sales, r.storeQty, r.whQty, `"${r.sizes.join('/')}"`, `"${r.action}"`
+      r.sales, r.myOnlineQty, r.storeQty, r.whQty, `"${r.sizes.join('/')}"`, `"${r.action}"`
     ].join(','));
   });
   const blob = new Blob(['\uFEFF'+csvRows.join('\n')], {type:'text/csv;charset=utf-8;'});
