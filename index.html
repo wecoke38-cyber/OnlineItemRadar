@@ -178,6 +178,10 @@
   .stock-chip.mine{background:#E9EDF7; color:#3B5BA9;}
   .stock-chip.empty{background:transparent; color:var(--ink-faint); font-family:var(--sans); font-weight:400;}
   .sizes{font-size:11.5px; color:var(--ink-soft); max-width:180px;}
+  .discount-val{font-weight:800; font-variant-numeric:tabular-nums;}
+  .discount-val.dc-high{color:var(--red);}
+  .discount-val.dc-mid{color:var(--orange);}
+  .discount-val.dc-low{color:var(--green);}
 
   .empty{text-align:center; padding:48px 20px; color:var(--ink-faint); font-size:13.5px;}
   .foot-actions{display:flex; justify-content:space-between; align-items:center; margin-top:16px; flex-wrap:wrap; gap:10px;}
@@ -216,7 +220,7 @@
       </div>
     </div>
     <div class="badge-meta">
-      <div>페이지 버전 <b>v2.0</b></div>
+      <div>페이지 버전 <b>v2.1</b></div>
       <div id="dataAsOf">데이터 기준 —</div>
       <div>브라우저 내에서만 처리 · 파일 서버 업로드 없음</div>
     </div>
@@ -246,6 +250,10 @@
         <div>
           <b style="color:var(--ink);">3. 목록이 너무 많으면 "상위 % 기준" 슬라이더를 낮추세요</b>
           <p style="margin:6px 0 0;">결과 화면 위쪽의 <b>"상위 ○% 기준"</b> 슬라이더는 전사에서 온라인 판매가 잘 되는 순서로 상위 몇 %까지만 볼지 정하는 기능입니다. 숫자를 낮출수록(예: 30% → 10%) 정말 잘 팔리는 상품만 추려서 목록이 줄어듭니다. 숫자를 높이면 더 폭넓게 보여줍니다.</p>
+        </div>
+        <div>
+          <b style="color:var(--ink);">4. 정상가 · 판매가 · 감가율이 추가되었습니다</b>
+          <p style="margin:6px 0 0;"><b>정상가</b>는 재고 파일 기준 원래 판매가이고, <b>판매가</b>는 최근 온라인에서 실제로 팔린 평균 단가입니다. <b>감가율</b>은 정상가 대비 얼마나 할인되어 팔렸는지를 뜻합니다(예: 30% = 정상가 대비 평균 30% 할인). 온라인 판매 이력이 없는 상품은 "-"로 표시됩니다.</p>
         </div>
         <div style="padding-top:8px; border-top:1px solid var(--line);">
           이 페이지는 검색엔진에 노출되지 않도록 설정되어 있습니다. 다만 <b>URL을 아는 사람은 누구나 열람할 수 있어</b> 별도 로그인은 없으니, 주소는 사내에서만 공유해주세요.
@@ -359,6 +367,9 @@
               <th class="num-cell">매장재고</th>
               <th class="num-cell">창고재고</th>
               <th>보유사이즈</th>
+              <th class="num-cell">정상가</th>
+              <th class="num-cell">판매가</th>
+              <th class="num-cell">감가율</th>
               <th>액션</th>
             </tr>
           </thead>
@@ -609,25 +620,44 @@ function buildAnalysis(threshold, whMinPull, storeMinExclude){
     myOnlineTotalQty += qty;
   }
 
-  // 물류재고 맵 (스타일+컬러)
+  // 스타일+컬러별 온라인 판매가/감가율 집계 (취소 제외, 전사 기준)
+  // 실매출 합계 ÷ 수량 합계 = 평균 실제 판매단가
+  // (정상판매금액 합계 - 실매출 합계) ÷ 정상판매금액 합계 = 감가율
+  const onlinePriceMap = new Map();
+  for (const r of online.records){
+    if ((r['취소구분']||'').toString().includes('취소')) continue;
+    const style = r['스타일'];
+    if (!style) continue;
+    const key = `${style}||${r['컬러']}`;
+    const qty = Number(r['수량']) || 0;
+    const sales = Number(r['실매출']) || 0;
+    const normalSales = Number(r['정상판매금액']) || 0;
+    const prev = onlinePriceMap.get(key) || {qty:0, sales:0, normalSales:0};
+    prev.qty += qty;
+    prev.sales += sales;
+    prev.normalSales += normalSales;
+    onlinePriceMap.set(key, prev);
+  }
+
+  // 물류재고 맵 (스타일+컬러) — 정상가 함께 기록
   const whMap = new Map();
   for (const r of warehouse.records){
     if (!r['스타일']) continue;
     const key = `${r['스타일']}||${r['컬러']}`;
     const qty = Number(r['현재재고']) || 0;
-    const prev = whMap.get(key) || {qty:0, brand:r['브랜드'], product:r['상품']};
+    const prev = whMap.get(key) || {qty:0, brand:r['브랜드'], product:r['상품'], normalPrice:Number(r['정상가'])||0};
     prev.qty += qty;
     whMap.set(key, prev);
   }
 
-  // 점재고 맵 (스타일+컬러)
+  // 점재고 맵 (스타일+컬러) — 정상가 함께 기록
   const storeMap = new Map();
   for (const r of store.records){
     if (!r['스타일']) continue;
     const key = `${r['스타일']}||${r['컬러']}`;
     const qty = Number(r['현재재고']) || 0;
     if (!storeMap.has(key)){
-      storeMap.set(key, {qty:0, sizes:[], brand:r['브랜드'], product:r['상품']});
+      storeMap.set(key, {qty:0, sizes:[], brand:r['브랜드'], product:r['상품'], normalPrice:Number(r['정상가'])||0});
     }
     const entry = storeMap.get(key);
     entry.qty += qty;
@@ -655,6 +685,14 @@ function buildAnalysis(threshold, whMinPull, storeMinExclude){
       const product = (storeEntry && storeEntry.product) || (whEntry && whEntry.product) || '-';
       const sortedSizes = storeEntry ? sortSizes(storeEntry.sizes) : [];
 
+      // 정상가 / 판매가 / 감가율 계산
+      const normalPrice = (storeEntry && storeEntry.normalPrice) || (whEntry && whEntry.normalPrice) || 0;
+      const priceInfo = onlinePriceMap.get(key);
+      const avgSellPrice = (priceInfo && priceInfo.qty > 0) ? Math.round(priceInfo.sales / priceInfo.qty) : 0;
+      const discountRate = (priceInfo && priceInfo.normalSales > 0)
+        ? Math.round((1 - priceInfo.sales / priceInfo.normalSales) * 1000) / 10
+        : null;
+
       if (storeEntry && storeEntry.qty > 0){
         const whQtyForThis = whEntry ? whEntry.qty : 0;
         // 매장재고도 적고(storeMinExclude 이하) 창고재고도 부족(whMinPull 미만)하면
@@ -666,7 +704,7 @@ function buildAnalysis(threshold, whMinPull, storeMinExclude){
           grade:'즉시등록', rank, pct, style, color, sales,
           storeQty: storeEntry.qty, sizes: sortedSizes, whQty: whQtyForThis,
           myOnlineQty: myOnlineMap.get(key) || 0,
-          brand, product,
+          brand, product, normalPrice, avgSellPrice, discountRate,
           action: `스마트스토어 즉시 등록 — 매장재고 ${storeEntry.qty}족, 사이즈 ${sortedSizes.join(', ')||'-'} 보유`
         });
       } else if (whEntry && whEntry.qty >= whMinPull){
@@ -674,7 +712,7 @@ function buildAnalysis(threshold, whMinPull, storeMinExclude){
           grade:'창고당김', rank, pct, style, color, sales,
           storeQty: 0, sizes: [], whQty: whEntry.qty,
           myOnlineQty: myOnlineMap.get(key) || 0,
-          brand, product,
+          brand, product, normalPrice, avgSellPrice, discountRate,
           action: `물류센터에 ${whEntry.qty}족 요청 후 등록 추천`
         });
       }
@@ -747,6 +785,13 @@ function currentFiltered(){
   });
 }
 
+function discountClass(rate){
+  if (rate === null) return '';
+  if (rate >= 30) return 'dc-high';
+  if (rate >= 10) return 'dc-mid';
+  return 'dc-low';
+}
+
 function renderTable(){
   const rows = currentFiltered();
   const tbody = document.getElementById('resultBody');
@@ -765,6 +810,11 @@ function renderTable(){
     const myOnlineCell = r.myOnlineQty
       ? `<span class="stock-chip mine">${r.myOnlineQty}개</span>`
       : `<span class="stock-chip empty">-</span>`;
+    const normalPriceCell = r.normalPrice ? `${r.normalPrice.toLocaleString()}원` : '-';
+    const sellPriceCell = r.avgSellPrice ? `${r.avgSellPrice.toLocaleString()}원` : '-';
+    const discountCell = (r.discountRate !== null)
+      ? `<span class="discount-val ${discountClass(r.discountRate)}">${r.discountRate}%</span>`
+      : '-';
     tr.innerHTML = `
       <td data-label="등급"><span class="grade-badge ${r.grade}">${r.grade==='즉시등록'?'🔴':'🟠'} ${r.grade}</span></td>
       <td data-label="브랜드">${r.brand}</td>
@@ -774,6 +824,9 @@ function renderTable(){
       <td data-label="매장재고" class="num-cell">${storeCell}</td>
       <td data-label="창고재고" class="num-cell">${whCell}</td>
       <td data-label="보유사이즈" class="sizes">${r.sizes.length ? r.sizes.join(', ') : '-'}</td>
+      <td data-label="정상가" class="num-cell">${normalPriceCell}</td>
+      <td data-label="판매가" class="num-cell">${sellPriceCell}</td>
+      <td data-label="감가율" class="num-cell">${discountCell}</td>
       <td data-label="액션" class="action-txt">${r.action}</td>
     `;
     tbody.appendChild(tr);
@@ -805,12 +858,14 @@ document.getElementById('thresholdSlider').addEventListener('change', () => {
 
 document.getElementById('exportBtn').addEventListener('click', () => {
   const rows = currentFiltered();
-  const header = ['등급','브랜드','상품','스타일','컬러','온라인매출(전사)','우리매장온라인판매수량','매장재고','창고재고','보유사이즈','액션'];
+  const header = ['등급','브랜드','상품','스타일','컬러','온라인매출(전사)','우리매장온라인판매수량','매장재고','창고재고','보유사이즈','정상가','판매가','감가율(%)','액션'];
   const csvRows = [header.join(',')];
   rows.forEach(r => {
     csvRows.push([
       r.grade, r.brand, r.product, r.style, r.color,
-      r.sales, r.myOnlineQty, r.storeQty, r.whQty, `"${r.sizes.join('/')}"`, `"${r.action}"`
+      r.sales, r.myOnlineQty, r.storeQty, r.whQty, `"${r.sizes.join('/')}"`,
+      r.normalPrice || '', r.avgSellPrice || '', (r.discountRate !== null ? r.discountRate : ''),
+      `"${r.action}"`
     ].join(','));
   });
   const blob = new Blob(['\uFEFF'+csvRows.join('\n')], {type:'text/csv;charset=utf-8;'});
